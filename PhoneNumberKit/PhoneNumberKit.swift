@@ -18,6 +18,7 @@ public final class PhoneNumberKit: NSObject {
     let metadataManager: MetadataManager
     let parseManager: ParseManager
     let regexManager = RegexManager()
+    public var overriddenExampleNumbers: [String: String] = [:] //[CountryCode: exampleNumber]
 
     // MARK: Lifecycle
 
@@ -158,7 +159,7 @@ public final class PhoneNumberKit: NSObject {
         let example: String?
         switch type {
         case .fixedLine: example = metadata?.fixedLine?.exampleNumber
-        case .mobile: example = metadata?.mobile?.exampleNumber
+        case .mobile: example = overriddenExampleNumbers[countryCode] ?? metadata?.mobile?.exampleNumber
         case .fixedOrMobile: example = metadata?.mobile?.exampleNumber
         case .pager: example = metadata?.pager?.exampleNumber
         case .personalNumber: example = metadata?.personalNumber?.exampleNumber
