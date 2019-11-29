@@ -16,7 +16,8 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
     public let phoneNumberKit: PhoneNumberKit!
 
     public lazy var flagButton = UIButton()
-
+    public var highlightCodePlaceholder: Bool = true
+    
     /// Override setText so number will be automatically formatted when setting text by code
     open override var text: String? {
         set {
@@ -239,7 +240,7 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
 
         let font = self.font ?? UIFont.preferredFont(forTextStyle: .body)
         let ph = NSMutableAttributedString(string: example, attributes: [.font: font])
-        if #available(iOS 13.0, *), self.withPrefix {
+        if  #available(iOS 13.0, *), self.withPrefix && highlightCodePlaceholder {
             // because the textfield will automatically handle insert & removal of the international prefix we make the
             // prefix darker to indicate non default behaviour to users, this behaviour currently only happens on iOS 13
             // and above just because that is where we have access to label colors
