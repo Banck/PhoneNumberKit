@@ -77,8 +77,9 @@ public final class PartialFormatter {
         case .custom(let maxDigits):
             extraDigits = nationalNumber.count - maxDigits
         case .possibleLength:
-            if let maxDigits = currentMetadata?.mobile?.possibleLengths?.national {
-                extraDigits = nationalNumber.count - (Int(maxDigits) ?? nationalNumber.count)
+            if let maxDigitsArray = currentMetadata?.mobile?.possibleLengths?.national?.components(separatedBy: ",") {
+                let maxDigits = maxDigitsArray.compactMap{Int($0)}.max{$0 > $1}
+                extraDigits = nationalNumber.count - (maxDigits ?? nationalNumber.count)
             }
         case .none: break
         }
