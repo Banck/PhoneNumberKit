@@ -250,7 +250,6 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
         guard self.withExamplePlaceholder else { return }
         if isEditing, !(self.text ?? "").isEmpty { return } // No need to update a placeholder while the placeholder isn't showing
         
-        let format: PhoneNumberFormat
         let format = self.withPrefix ? PhoneNumberFormat.international : .national
 
 //        if self.currentRegion == "RU" {
