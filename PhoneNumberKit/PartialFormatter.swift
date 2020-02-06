@@ -16,11 +16,11 @@ public final class PartialFormatter {
     weak var parser: PhoneNumberParser?
     weak var regexManager: RegexManager?
 
-    public convenience init(phoneNumberKit: PhoneNumberKit = PhoneNumberKit(), defaultRegion: String = PhoneNumberKit.defaultRegionCode(), withPrefix: Bool = true, maxDigits: Int? = nil) {
-        self.init(phoneNumberKit: phoneNumberKit, regexManager: phoneNumberKit.regexManager, metadataManager: phoneNumberKit.metadataManager, parser: phoneNumberKit.parseManager.parser, defaultRegion: defaultRegion, withPrefix: withPrefix, maxDigits: maxDigits)
+    public convenience init(phoneNumberKit: PhoneNumberKit = PhoneNumberKit(), defaultRegion: String = PhoneNumberKit.defaultRegionCode(), withPrefix: Bool = true, maxDigitsStyle: MaxDigitsStyle? = nil) {
+        self.init(phoneNumberKit: phoneNumberKit, regexManager: phoneNumberKit.regexManager, metadataManager: phoneNumberKit.metadataManager, parser: phoneNumberKit.parseManager.parser, defaultRegion: defaultRegion, withPrefix: withPrefix, maxDigitsStyle: maxDigitsStyle)
     }
 
-    init(phoneNumberKit: PhoneNumberKit, regexManager: RegexManager, metadataManager: MetadataManager, parser: PhoneNumberParser, defaultRegion: String, withPrefix: Bool = true, maxDigits: Int? = nil) {
+    init(phoneNumberKit: PhoneNumberKit, regexManager: RegexManager, metadataManager: MetadataManager, parser: PhoneNumberParser, defaultRegion: String, withPrefix: Bool = true, maxDigitsStyle: MaxDigitsStyle? = nil) {
         self.phoneNumberKit = phoneNumberKit
         self.regexManager = regexManager
         self.metadataManager = metadataManager
@@ -28,7 +28,7 @@ public final class PartialFormatter {
         self.defaultRegion = defaultRegion
         self.updateMetadataForDefaultRegion()
         self.withPrefix = withPrefix
-        self.maxDigits = maxDigits
+        self.maxDigitsStyle = maxDigitsStyle
     }
 
     public var defaultRegion: String {
@@ -37,7 +37,7 @@ public final class PartialFormatter {
         }
     }
 
-    public var maxDigits: Int?
+    public var maxDigitsStyle: MaxDigitsStyle?
 
     func updateMetadataForDefaultRegion() {
         guard let metadataManager = metadataManager else { return }
@@ -71,13 +71,20 @@ public final class PartialFormatter {
         }
 
         nationalNumber = self.extractNationalPrefix(nationalNumber)
-
-        if let maxDigits = maxDigits {
-            let extra = nationalNumber.count - maxDigits
-
-            if extra > 0 {
-                nationalNumber = String(nationalNumber.dropLast(extra))
+        
+        var extraDigits: Int = 0
+        switch maxDigitsStyle {
+        case .custom(let maxDigits):
+            extraDigits = nationalNumber.count - maxDigits
+        case .possibleLength:
+            if let maxDigits = currentMetadata?.mobile?.possibleLengths?.national {
+                extraDigits = nationalNumber.count - (Int(maxDigits) ?? nationalNumber.count)
             }
+        case .none: break
+        }
+        
+        if extraDigits > 0 {
+            nationalNumber = String(nationalNumber.dropLast(extraDigits))
         }
 
         return nationalNumber

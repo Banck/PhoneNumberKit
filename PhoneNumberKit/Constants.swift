@@ -98,6 +98,11 @@ public enum PossibleLengthType: String, Codable {
   case localOnly
 }
 
+public enum MaxDigitsStyle {
+    case possibleLength
+    case custom(Int)
+}
+
 // MARK: Constants
 
 struct PhoneNumberConstants {

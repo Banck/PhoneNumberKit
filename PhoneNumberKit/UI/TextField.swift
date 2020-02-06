@@ -105,9 +105,9 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
 
     public var isPartialFormatterEnabled = true
 
-    public var maxDigits: Int? {
+    public var maxDigitsStyle: MaxDigitsStyle? {
         didSet {
-            self.partialFormatter.maxDigits = self.maxDigits
+            self.partialFormatter.maxDigitsStyle = self.maxDigitsStyle
         }
     }
 
