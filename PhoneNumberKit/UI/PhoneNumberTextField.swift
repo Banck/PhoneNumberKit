@@ -1,9 +1,9 @@
 //
-//  TextField.swift
+//  PhoneNumberTextField.swift
 //  PhoneNumberKit
 //
 //  Created by Roy Marmelstein on 07/11/2015.
-//  Copyright © 2015 Roy Marmelstein. All rights reserved.
+//  Copyright © 2020 Roy Marmelstein. All rights reserved.
 //
 
 #if canImport(UIKit)
@@ -54,7 +54,9 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
                 please override defaultRegion in a subclass instead.
             """
         )
-        set {}
+        set {
+            self.partialFormatter.defaultRegion = newValue
+        }
     }
 
     public var withPrefix: Bool = true {
@@ -88,6 +90,34 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
             }
         }
     }
+
+    #if compiler(>=5.1)
+    /// Available on iOS 13 and above just.
+    public var countryCodePlaceholderColor: UIColor = {
+        if #available(iOS 13.0, *) {
+            return .secondaryLabel
+        } else {
+            return UIColor(red: 0, green: 0, blue: 0.0980392, alpha: 0.22)
+        }
+    }() {
+        didSet {
+            self.updatePlaceholder()
+        }
+    }
+
+    /// Available on iOS 13 and above just.
+    public var numberPlaceholderColor: UIColor = {
+        if #available(iOS 13.0, *) {
+            return .tertiaryLabel
+        } else {
+            return UIColor(red: 0, green: 0, blue: 0.0980392, alpha: 0.22)
+        }
+    }() {
+        didSet {
+            self.updatePlaceholder()
+        }
+    }
+    #endif
 
     private var _withDefaultPickerUI: Bool = false {
         didSet {
@@ -154,6 +184,19 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
             return true
         } catch {
             return false
+        }
+    }
+
+    /**
+     Returns the current valid phone number.
+     - returns: PhoneNumber?
+     */
+    public var phoneNumber: PhoneNumber? {
+        guard let rawNumber = self.text else { return nil }
+        do {
+            return try phoneNumberKit.parse(rawNumber, withRegion: currentRegion)
+        } catch {
+            return nil
         }
     }
 
@@ -249,19 +292,12 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
     open func updatePlaceholder() {
         guard self.withExamplePlaceholder else { return }
         if isEditing, !(self.text ?? "").isEmpty { return } // No need to update a placeholder while the placeholder isn't showing
-        
+
         let format = self.withPrefix ? PhoneNumberFormat.international : .national
-
-//        if self.currentRegion == "RU" {
-//            format = self.withPrefix ? PhoneNumberFormat.national : .international
-//        } else {
-//            format = self.withPrefix ? PhoneNumberFormat.international : .national
-//        }
-                
         let example = self.phoneNumberKit.getFormattedExampleNumber(forCountry: self.currentRegion, withFormat: format, withPrefix: self.withPrefix) ?? "12345678"
-
         let font = self.font ?? UIFont.preferredFont(forTextStyle: .body)
         let ph = NSMutableAttributedString(string: example, attributes: [.font: font])
+
         #if compiler(>=5.1)
         if  #available(iOS 13.0, *), self.withPrefix && highlightCodePlaceholder {
             // because the textfield will automatically handle insert & removal of the international prefix we make the
@@ -269,10 +305,11 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
             // and above just because that is where we have access to label colors
             let firstSpaceIndex = example.firstIndex(where: { $0 == " " }) ?? example.startIndex
 
-            ph.addAttribute(.foregroundColor, value: UIColor.secondaryLabel, range: NSRange(..<firstSpaceIndex, in: example))
-            ph.addAttribute(.foregroundColor, value: UIColor.tertiaryLabel, range: NSRange(firstSpaceIndex..., in: example))
+            ph.addAttribute(.foregroundColor, value: self.countryCodePlaceholderColor, range: NSRange(..<firstSpaceIndex, in: example))
+            ph.addAttribute(.foregroundColor, value: self.numberPlaceholderColor, range: NSRange(firstSpaceIndex..., in: example))
         }
         #endif
+
         self.attributedPlaceholder = ph
     }
 
@@ -428,15 +465,20 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
     }
 
     open func textFieldDidEndEditing(_ textField: UITextField) {
-        if self.withExamplePlaceholder, self.withPrefix, let countryCode = phoneNumberKit.countryCode(for: currentRegion)?.description,
-            let text = textField.text,
-            text == internationalPrefix(for: countryCode) {
-            textField.text = ""
-            sendActions(for: .editingChanged)
-            self.updateFlag()
-            self.updatePlaceholder()
-        }
+        updateTextFieldDidEndEditing(textField)
         self._delegate?.textFieldDidEndEditing?(textField)
+    }
+
+    @available (iOS 10.0, tvOS 10.0, *)
+    open func textFieldDidEndEditing(_ textField: UITextField, reason: UITextField.DidEndEditingReason) {
+        updateTextFieldDidEndEditing(textField)
+        if let _delegate = _delegate {
+            if (_delegate.responds(to: #selector(textFieldDidEndEditing(_:reason:)))) {
+                _delegate.textFieldDidEndEditing?(textField, reason: reason)
+            } else {
+                _delegate.textFieldDidEndEditing?(textField)
+            }
+        }
     }
 
     open func textFieldShouldClear(_ textField: UITextField) -> Bool {
@@ -445,6 +487,17 @@ open class PhoneNumberTextField: UITextField, UITextFieldDelegate {
 
     open func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         return self._delegate?.textFieldShouldReturn?(textField) ?? true
+    }
+
+    private func updateTextFieldDidEndEditing(_ textField: UITextField) {
+        if self.withExamplePlaceholder, self.withPrefix, let countryCode = phoneNumberKit.countryCode(for: currentRegion)?.description,
+            let text = textField.text,
+            text == internationalPrefix(for: countryCode) {
+            textField.text = ""
+            sendActions(for: .editingChanged)
+            self.updateFlag()
+            self.updatePlaceholder()
+        }
     }
 }
 
@@ -458,7 +511,7 @@ extension PhoneNumberTextField: CountryCodePickerDelegate {
         updateFlag()
         updatePlaceholder()
 
-        if let nav = containingViewController?.navigationController {
+        if let nav = containingViewController?.navigationController, !PhoneNumberKit.CountryCodePicker.forceModalPresentation {
             nav.popViewController(animated: true)
         } else {
             containingViewController?.dismiss(animated: true)
