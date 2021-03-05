@@ -234,7 +234,10 @@ public final class PartialFormatter {
         }
         let index = rawNumber.index(rawNumber.startIndex, offsetBy: startOfNationalNumber)
         processedNumber = String(rawNumber[index...])
-        self.prefixBeforeNationalNumber.append(String(rawNumber[..<index]))
+        let nationalPrefix = String(rawNumber[..<index])
+        if self.prefixBeforeNationalNumber.replacingOccurrences(of: "+", with: "").isEmpty {
+            self.prefixBeforeNationalNumber.append(nationalPrefix)
+        }
         return processedNumber
     }
 
